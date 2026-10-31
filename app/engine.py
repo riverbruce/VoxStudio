@@ -98,7 +98,9 @@ def get_tts(lora_path: str | None = None):
         kwargs["lora_weights_path"] = lora_path
     t = time.time()
     log(f"Đang nạp VoxCPM2{' + LoRA' if lora_path else ''}...")
+    _patch_low_ram_init(torch)
     model = VoxCPM(**kwargs)
+    gc.collect()
     _state["tts"] = model
     _state["tts_lora"] = lora_path
     log(f"Nạp xong VoxCPM2 sau {time.time() - t:.1f}s")
@@ -106,6 +108,29 @@ def get_tts(lora_path: str | None = None):
 
 
 _GEN_PARAMS = None
+
+
+def _patch_low_ram_init(torch):
+    """Tạo khung model thẳng ở bfloat16 thay vì float32 -> nạp model tốn ~10GB RAM thay vì ~15GB
+    (máy 16GB RAM không còn bị sập khi nạp). Kết quả cuối giống hệt vì model vẫn chạy bfloat16."""
+    try:
+        from voxcpm.model import voxcpm2 as m2
+    except Exception:
+        return
+    cls = m2.VoxCPM2Model
+    if getattr(cls, "_vox_lowram", False):
+        return
+    orig = cls.__init__
+
+    def init(self, *a, **k):
+        prev = torch.get_default_dtype()
+        torch.set_default_dtype(torch.bfloat16)
+        try:
+            orig(self, *a, **k)
+        finally:
+            torch.set_default_dtype(prev)
+    cls.__init__ = init
+    cls._vox_lowram = True
 
 
 def tts_sample_rate() -> int:

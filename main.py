@@ -140,8 +140,13 @@ def watchdog():
     while True:
         time.sleep(15)
         idle = time.time() - heartbeat.last_seen()
-        busy = jobs.RUNNER.busy() or (lora is not None and lora.is_busy())
-        if idle > 180 and not busy:
+        from app import engine
+        gpu_busy = not engine.GPU_LOCK.acquire(blocking=False)
+        if not gpu_busy:
+            engine.GPU_LOCK.release()
+        busy = jobs.RUNNER.busy() or (lora is not None and lora.is_busy()) or gpu_busy
+        # chỉ tắt khi đã đóng cửa sổ từ lâu (15 phút) và không có việc gì đang chạy
+        if idle > 900 and not busy:
             print("[VoxStudio] Không còn cửa sổ nào mở -> tắt app.", flush=True)
             os._exit(0)
 

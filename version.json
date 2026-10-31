@@ -1,8 +1,8 @@
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "date": "2026-10-31",
   "repo": "riverbruce/VoxStudio",
   "branch": "main",
-  "notes": "Sửa lỗi app tự tắt; sửa bộ cài (nhận đúng card NVIDIA, lỗi file đang bị dùng, lỗi Access denied khi cài Python); chạy thử lỗi không còn làm hỏng cả cài đặt.",
+  "notes": "Nạp model tốn ít RAM hơn (~10GB thay vì ~15GB) – sửa lỗi \"server lost\" trên máy 16GB RAM; app không tự tắt khi đang làm việc.",
   "requirements_rev": 1
 }
