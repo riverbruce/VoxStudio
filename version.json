@@ -1,8 +1,8 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "date": "2026-10-31",
   "repo": "riverbruce/VoxStudio",
   "branch": "main",
-  "notes": "Sửa lỗi app tự tắt sau khi mở; sửa bộ cài không nhận card NVIDIA và lỗi \"file đang bị dùng\" trên một số máy.",
+  "notes": "Sửa lỗi app tự tắt sau khi mở; sửa bộ cài: nhận đúng card NVIDIA, lỗi \"file đang bị dùng\", lỗi \"Access is denied\" khi cài Python trên một số máy.",
   "requirements_rev": 1
 }

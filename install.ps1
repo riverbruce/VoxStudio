@@ -104,8 +104,19 @@ try {
 
     Step 3 "Private Python 3.11 + virtual env (.venv)"
     if (!(Test-Path "$Root\.venv\Scripts\python.exe")) {
-        Run $Uv @("python", "install", "3.11")
-        Run $Uv @("venv", "$Root\.venv", "--python", "3.11", "--python-preference", "only-managed")
+        # Some PCs block uv from creating its "3.11" shortcut folder (Access denied).
+        # Python itself is still downloaded fine -> ignore that error and point the venv at python.exe directly.
+        $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+        & $Uv python install 3.11 2>&1 | ForEach-Object { $t = "$_"; Write-Host $t; try { [IO.File]::AppendAllText($Log, $t + "`r`n") } catch {} }
+        $ErrorActionPreference = $old
+        $pyexe = Get-ChildItem "$Root\runtime\python" -Directory -ErrorAction SilentlyContinue |
+                 Where-Object { $_.Name -match '^cpython-3\.11\.\d+' -and (Test-Path (Join-Path $_.FullName "python.exe")) } |
+                 Sort-Object Name -Descending | Select-Object -First 1
+        if (-not $pyexe) { throw "Python 3.11 download failed (check internet / antivirus)." }
+        $pyexe = Join-Path $pyexe.FullName "python.exe"
+        Say "Python: $pyexe"
+        if (Test-Path "$Root\.venv") { Remove-Item "$Root\.venv" -Recurse -Force -ErrorAction SilentlyContinue }
+        Run $Uv @("venv", "$Root\.venv", "--python", $pyexe)
     }
     $Py = "$Root\.venv\Scripts\python.exe"
 
