@@ -65,7 +65,12 @@ Section "VoxStudio" SecMain
   WriteRegDWORD HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\VoxStudio" "NoRepair" 1
 
   DetailPrint "Đang tải và cài Python, thư viện, model (cửa sổ cài đặt sẽ hiện ra, vui lòng chờ)..."
-  ExecWait '"$SYSDIR\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\install.ps1"' $0
+  ; bộ cài là chương trình 32-bit -> phải gọi PowerShell 64-bit qua Sysnative (nếu không sẽ không thấy card NVIDIA)
+  StrCpy $4 "$WINDIR\Sysnative\WindowsPowerShell\v1.0\powershell.exe"
+  ${IfNot} ${FileExists} "$4"
+    StrCpy $4 "$SYSDIR\WindowsPowerShell\v1.0\powershell.exe"
+  ${EndIf}
+  ExecWait '"$4" -NoProfile -ExecutionPolicy Bypass -File "$INSTDIR\install.ps1"' $0
 
   ClearErrors
   FileOpen $1 "$INSTDIR\logs\install_status.txt" r

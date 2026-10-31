@@ -71,6 +71,12 @@ try:
 except Exception:
     pass
 _fh = open(_logf, "a", encoding="utf-8")
+try:   # ghi lại cả lỗi sập cấp thấp (native crash) để chẩn đoán
+    import faulthandler
+    _crash = open(LOGS / "crash.log", "a", encoding="utf-8")
+    faulthandler.enable(file=_crash)
+except Exception:
+    pass
 sys.stdout = _Tee(sys.stdout, _fh)
 sys.stderr = _Tee(sys.stderr, _fh)
 
@@ -111,30 +117,17 @@ def open_window():
     webbrowser.open(URL)
 
 
-def splash(stop: threading.Event):
-    """Màn hình chờ nhỏ trong lúc app khởi động."""
+def splash():
+    """Màn hình chờ chạy ở TIẾN TRÌNH RIÊNG (Tkinter trong luồng phụ có thể làm sập app trên Windows)."""
     try:
-        import tkinter as tk
-        root = tk.Tk()
-        root.overrideredirect(True)
-        w, h = 380, 130
-        root.geometry(f"{w}x{h}+{(root.winfo_screenwidth() - w) // 2}+{(root.winfo_screenheight() - h) // 2}")
-        root.configure(bg="#1e1b4b")
-        tk.Label(root, text="🎙️ VoxStudio", fg="white", bg="#1e1b4b", font=("Segoe UI", 18, "bold")).pack(pady=(22, 4))
-        msg = tk.Label(root, text="Đang khởi động…", fg="#c7d2fe", bg="#1e1b4b", font=("Segoe UI", 11))
-        msg.pack()
-        root.attributes("-topmost", True)
-
-        def poll():
-            if stop.is_set():
-                root.destroy()
-            else:
-                root.after(200, poll)
-        poll()
-        root.after(120000, root.destroy)
-        root.mainloop()
+        exe = sys.executable
+        if os.name == "nt":
+            pw = os.path.join(os.path.dirname(exe), "pythonw.exe")
+            exe = pw if os.path.exists(pw) else exe
+        subprocess.Popen([exe, str(ROOT / "scripts" / "splash.py"), URL], cwd=str(ROOT),
+                         creationflags=0x08000000 if os.name == "nt" else 0)
     except Exception:
-        stop.wait(120)
+        pass
 
 
 # ---------------------------------------------------------------- tự tắt khi đóng cửa sổ
@@ -171,9 +164,8 @@ if __name__ == "__main__":
     if restarted:
         port_free(30)          # đợi bản cũ tắt hẳn
 
-    stop_splash = threading.Event()
     if "--no-browser" not in sys.argv and not restarted:
-        threading.Thread(target=splash, args=(stop_splash,), daemon=True).start()
+        splash()
 
     from app.ui import CSS, HEAD, build_ui  # noqa: E402
     import gradio as gr
@@ -187,7 +179,6 @@ if __name__ == "__main__":
             if server_alive():
                 break
             time.sleep(0.5)
-        stop_splash.set()
         if "--no-browser" not in sys.argv and not restarted:
             open_window()
         from app import heartbeat

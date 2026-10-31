@@ -1,8 +1,8 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "date": "2026-10-31",
   "repo": "riverbruce/VoxStudio",
   "branch": "main",
-  "notes": "Bản đầu tiên: clone giọng 30 ngôn ngữ, đọc kịch bản dài, phụ đề SRT, cảm xúc giọng đọc, huấn luyện LoRA, tự cập nhật.",
+  "notes": "Sửa lỗi app tự tắt sau khi mở; sửa bộ cài không nhận card NVIDIA và lỗi \"file đang bị dùng\" trên một số máy.",
   "requirements_rev": 1
 }

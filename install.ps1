@@ -23,11 +23,20 @@ $env:PYTHONUTF8 = "1"
 $env:SETUPTOOLS_SCM_PRETEND_VERSION_FOR_VOXCPM = "2.1.0"
 $env:SETUPTOOLS_SCM_PRETEND_VERSION = "2.1.0"
 
-function Say($m) { $l = "$(Get-Date -Format 'HH:mm:ss') $m"; Write-Host $l -ForegroundColor Cyan; Add-Content -Path $Log -Value $l -Encoding UTF8 }
-function Step($n, $m) { Set-Content -Path $Status -Value "STEP $n/8 $m" -Encoding UTF8; Write-Host ""; Say "===== [$n/8] $m =====" }
+function Say($m) {
+    $l = "$(Get-Date -Format 'HH:mm:ss') $m"; Write-Host $l -ForegroundColor Cyan
+    for ($i = 0; $i -lt 5; $i++) { try { [IO.File]::AppendAllText($Log, $l + "`r`n"); return } catch { Start-Sleep -Milliseconds 200 } }
+}
+function SetStatus($v) {
+    # status file may be locked briefly by antivirus/Explorer -> retry, never fail the install because of it
+    for ($i = 0; $i -lt 10; $i++) {
+        try { [IO.File]::WriteAllText($Status, $v); return } catch { Start-Sleep -Milliseconds 300 }
+    }
+}
+function Step($n, $m) { SetStatus "STEP $n/8 $m"; Write-Host ""; Say "===== [$n/8] $m =====" }
 function Run($exe, [string[]]$a) {
     $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
-    & $exe @a 2>&1 | ForEach-Object { "$_" } | Tee-Object -FilePath $Log -Append | Write-Host
+    & $exe @a 2>&1 | ForEach-Object { $t = "$_"; Write-Host $t; try { [IO.File]::AppendAllText($Log, $t + "`r`n") } catch {} }
     $code = $LASTEXITCODE; $ErrorActionPreference = $old
     if ($code -ne 0) { throw "Command failed ($code): $exe $($a -join ' ')" }
 }
@@ -46,16 +55,27 @@ try {
     Write-Host "=================================================================" -ForegroundColor Yellow
     Say "VoxStudio install started in $Root"
 
-    # ---- GPU check
+    # ---- GPU check (nvidia-smi in several places + ask Windows directly)
     $gpu = "cpu"
-    $smi = Get-Command nvidia-smi -ErrorAction SilentlyContinue
-    if (-not $smi -and (Test-Path "C:\Windows\System32\nvidia-smi.exe")) { $smi = "C:\Windows\System32\nvidia-smi.exe" }
-    if ($smi) {
+    $cands = @("$env:windir\Sysnative\nvidia-smi.exe", "$env:windir\System32\nvidia-smi.exe",
+               "$env:ProgramFiles\NVIDIA Corporation\NVSMI\nvidia-smi.exe")
+    $c = Get-Command nvidia-smi -ErrorAction SilentlyContinue
+    if ($c) { $cands = @($c.Source) + $cands }
+    foreach ($smi in $cands) {
+        if ($smi -and (Test-Path $smi)) {
+            try {
+                $info = & $smi --query-gpu=name,memory.total --format=csv,noheader 2>$null | Select-Object -First 1
+                if ($info) { $gpu = "cuda"; Say "GPU: $info"; break }
+            } catch {}
+        }
+    }
+    if ($gpu -eq "cpu") {
         try {
-            $info = & $smi --query-gpu=name,memory.total --format=csv,noheader 2>$null | Select-Object -First 1
-            if ($info) { $gpu = "cuda"; Say "GPU: $info" }
+            $vc = Get-CimInstance Win32_VideoController -ErrorAction Stop | Where-Object { $_.Name -match "NVIDIA" } | Select-Object -First 1
+            if ($vc) { $gpu = "cuda"; Say "GPU (Windows): $($vc.Name)" }
         } catch {}
     }
+    if ([Environment]::Is64BitOperatingSystem -eq $false) { throw "Can 64-bit Windows." }
     if ($gpu -eq "cpu") {
         Say "WARNING: no NVIDIA GPU found -> CPU mode (very slow, only for short texts)."
         Write-Host "  [!] Khong thay card NVIDIA. VoxStudio se chay bang CPU (rat cham)." -ForegroundColor Red
@@ -123,7 +143,7 @@ try {
         $lnk.Save()
     }
 
-    Set-Content -Path $Status -Value "DONE" -Encoding UTF8
+    SetStatus "DONE"
     Say "INSTALL DONE."
     Write-Host ""
     Write-Host "  CAI DAT XONG! Mo VoxStudio bang icon ngoai Desktop." -ForegroundColor Green
@@ -131,7 +151,7 @@ try {
 catch {
     $code = 1
     Say "INSTALL FAILED: $_"
-    Set-Content -Path $Status -Value "FAILED: $_" -Encoding UTF8
+    SetStatus "FAILED: $_"
     Write-Host ""
     Write-Host "  CAI DAT CHUA XONG. Kiem tra mang Internet roi chay lai 'install.bat' (cac buoc da xong se duoc bo qua)." -ForegroundColor Red
     Write-Host "  Chi tiet loi: logs\install.log" -ForegroundColor Red
