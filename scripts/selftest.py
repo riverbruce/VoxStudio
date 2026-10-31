@@ -3,7 +3,9 @@ import os
 import sys
 import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from app.config import OUTPUTS  # noqa
+from app.config import LOGS, OUTPUTS  # noqa
+import faulthandler  # noqa
+faulthandler.enable(file=open(LOGS / "crash.log", "a", encoding="utf-8"))
 import torch  # noqa
 print("torch", torch.__version__, "cuda", torch.cuda.is_available(),
       torch.cuda.get_device_name(0) if torch.cuda.is_available() else "-", flush=True)

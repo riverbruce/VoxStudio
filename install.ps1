@@ -75,6 +75,11 @@ try {
             if ($vc) { $gpu = "cuda"; Say "GPU (Windows): $($vc.Name)" }
         } catch {}
     }
+    try {
+        $cs = Get-CimInstance Win32_ComputerSystem
+        $os = Get-CimInstance Win32_OperatingSystem
+        Say ("RAM: {0:N1} GB total, {1:N1} GB free; page file max {2:N1} GB" -f ($cs.TotalPhysicalMemory/1GB), ($os.FreePhysicalMemory/1MB), ($os.SizeStoredInPagingFiles/1MB))
+    } catch {}
     if ([Environment]::Is64BitOperatingSystem -eq $false) { throw "Can 64-bit Windows." }
     if ($gpu -eq "cpu") {
         Say "WARNING: no NVIDIA GPU found -> CPU mode (very slow, only for short texts)."
@@ -138,10 +143,7 @@ try {
     Step 6 "Download models (VoxCPM2 ~5GB, Whisper ~1.6GB, ZipEnhancer)"
     Run $Py @("$Root\scripts\download_models.py")
 
-    Step 7 "Self test (read one sentence)"
-    Run $Py @("$Root\scripts\selftest.py")
-
-    Step 8 "Shortcuts"
+    Step 7 "Shortcuts"
     $ws = New-Object -ComObject WScript.Shell
     $targets = @([Environment]::GetFolderPath("Desktop"), (Join-Path ([Environment]::GetFolderPath("StartMenu")) "Programs"))
     foreach ($t in $targets) {
@@ -152,6 +154,18 @@ try {
         $lnk.IconLocation = "$Root\assets\icon.ico"
         $lnk.Description = "VoxStudio - clone giong & doc kich ban"
         $lnk.Save()
+    }
+
+    Step 8 "Self test (read one sentence)"
+    $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    & $Py "$Root\scripts\selftest.py" 2>&1 | ForEach-Object { $t = "$_"; Write-Host $t; try { [IO.File]::AppendAllText($Log, $t + "`r`n") } catch {} }
+    $st = $LASTEXITCODE; $ErrorActionPreference = $old
+    if ($st -ne 0) {
+        Say "WARNING: self test failed (code $st). App is installed; see logs\crash.log"
+        Write-Host ""
+        Write-Host "  [!] Cai dat xong nhung doc thu bi loi (ma $st)." -ForegroundColor Yellow
+        Write-Host "      Thuong do may thieu RAM. Hay dong bot phan mem roi mo VoxStudio thu lai." -ForegroundColor Yellow
+        Write-Host "      Neu van loi: gui file logs\crash.log va logs\install.log cho nguoi ho tro." -ForegroundColor Yellow
     }
 
     SetStatus "DONE"
