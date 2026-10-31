@@ -1,0 +1,11 @@
+# Thư viện thêm của VoxStudio (ngoài torch + VoxCPM). Updater tự cài khi file này thay đổi.
+imageio-ffmpeg
+pyloudnorm
+python-docx
+pypdf
+ebooklib
+beautifulsoup4
+chardet
+tensorboardX
+pyyaml
+accelerate

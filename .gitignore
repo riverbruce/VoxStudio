@@ -1,0 +1,19 @@
+# Chỉ đưa CODE lên GitHub. Không bao giờ đưa giọng, dự án, model, thư viện.
+/voices/
+/projects/
+/outputs/
+/models/
+/cache/
+/logs/
+/tmp/
+/runtime/
+/.venv/
+/VoxCPM-src/
+/settings.json
+/dist/
+__pycache__/
+*.pyc
+*.wav
+*.mp3
+*.voxvoice
+/VoxStudio/

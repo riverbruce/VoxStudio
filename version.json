@@ -1,0 +1,8 @@
+{
+  "version": "1.0.0",
+  "date": "2026-10-31",
+  "repo": "riverbruce/VoxStudio",
+  "branch": "main",
+  "notes": "Bản đầu tiên: clone giọng 30 ngôn ngữ, đọc kịch bản dài, phụ đề SRT, cảm xúc giọng đọc, huấn luyện LoRA, tự cập nhật.",
+  "requirements_rev": 1
+}
